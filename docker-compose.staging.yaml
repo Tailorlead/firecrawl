@@ -1,0 +1,46 @@
+# Docker Compose override for staging environment (4 CPUs / 15GB RAM)
+# Usage: docker compose -f docker-compose.yaml -f docker-compose.staging.yaml up -d
+
+services:
+  playwright-service:
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 2G
+    shm_size: 512M
+    tmpfs:
+      - /tmp/.cache:noexec,nosuid,size=1g
+
+  playwright-lb:
+    cpus: 0.2
+    mem_limit: 128M
+
+  api:
+    cpus: 1.5
+    mem_limit: 4G
+    memswap_limit: 4G
+    environment:
+      NUM_WORKERS_PER_QUEUE: ${NUM_WORKERS_PER_QUEUE:-4}
+      CRAWL_CONCURRENT_REQUESTS: ${CRAWL_CONCURRENT_REQUESTS:-10}
+      MAX_CONCURRENT_JOBS: ${MAX_CONCURRENT_JOBS:-4}
+      BROWSER_POOL_SIZE: ${BROWSER_POOL_SIZE:-4}
+      MAX_CONCURRENT_PAGES: ${MAX_CONCURRENT_PAGES:-8}
+      NUQ_WORKER_COUNT: ${NUQ_WORKER_COUNT:-2}
+
+  redis:
+    cpus: 0.5
+    mem_limit: 1G
+    memswap_limit: 1G
+    command: redis-server --bind 0.0.0.0 --maxmemory 768mb --maxmemory-policy allkeys-lru
+
+  rabbitmq:
+    cpus: 0.5
+    mem_limit: 1G
+    memswap_limit: 1G
+
+  nuq-postgres:
+    cpus: 0.3
+    mem_limit: 1G
+    memswap_limit: 1G
