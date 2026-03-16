@@ -21,13 +21,6 @@ services:
     cpus: 1.5
     mem_limit: 4G
     memswap_limit: 4G
-    environment:
-      NUM_WORKERS_PER_QUEUE: ${NUM_WORKERS_PER_QUEUE:-4}
-      CRAWL_CONCURRENT_REQUESTS: ${CRAWL_CONCURRENT_REQUESTS:-10}
-      MAX_CONCURRENT_JOBS: ${MAX_CONCURRENT_JOBS:-4}
-      BROWSER_POOL_SIZE: ${BROWSER_POOL_SIZE:-4}
-      MAX_CONCURRENT_PAGES: ${MAX_CONCURRENT_PAGES:-8}
-      NUQ_WORKER_COUNT: ${NUQ_WORKER_COUNT:-2}
 
   redis:
     cpus: 0.5
