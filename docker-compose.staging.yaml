@@ -1,39 +1,229 @@
-# Docker Compose override for staging environment (4 CPUs / 15GB RAM)
-# Usage: docker compose -f docker-compose.yaml -f docker-compose.staging.yaml up -d
+name: firecrawl
+
+x-common-service: &common-service
+  build: apps/api
+  ulimits:
+    nofile:
+      soft: 65535
+      hard: 65535
+  networks:
+    - backend
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "3"
+      compress: "true"
+  restart: unless-stopped
+
+x-common-env: &common-env
+  REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+  REDIS_RATE_LIMIT_URL: ${REDIS_URL:-redis://redis:6379}
+  PLAYWRIGHT_MICROSERVICE_URL: ${PLAYWRIGHT_MICROSERVICE_URL:-http://playwright-lb:3000/scrape}
+  POSTGRES_USER: ${POSTGRES_USER:-postgres}
+  POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+  POSTGRES_DB: ${POSTGRES_DB:-postgres}
+  POSTGRES_HOST: ${POSTGRES_HOST:-nuq-postgres}
+  POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+  USE_DB_AUTHENTICATION: ${USE_DB_AUTHENTICATION:-false}
+  NUM_WORKERS_PER_QUEUE: ${NUM_WORKERS_PER_QUEUE:-8}
+  CRAWL_CONCURRENT_REQUESTS: ${CRAWL_CONCURRENT_REQUESTS:-30}
+  MAX_CONCURRENT_JOBS: ${MAX_CONCURRENT_JOBS:-9}
+  BROWSER_POOL_SIZE: ${BROWSER_POOL_SIZE:-9}
+  OPENAI_API_KEY: ${OPENAI_API_KEY}
+  OPENAI_BASE_URL: ${OPENAI_BASE_URL}
+  MODEL_NAME: ${MODEL_NAME}
+  MODEL_EMBEDDING_NAME: ${MODEL_EMBEDDING_NAME}
+  OLLAMA_BASE_URL: ${OLLAMA_BASE_URL}
+  SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL}
+  BULL_AUTH_KEY: ${BULL_AUTH_KEY}
+  TEST_API_KEY: ${TEST_API_KEY}
+  SUPABASE_ANON_TOKEN: ${SUPABASE_ANON_TOKEN}
+  SUPABASE_URL: ${SUPABASE_URL}
+  SUPABASE_SERVICE_TOKEN: ${SUPABASE_SERVICE_TOKEN}
+  SELF_HOSTED_WEBHOOK_URL: ${SELF_HOSTED_WEBHOOK_URL}
+  LOGGING_LEVEL: ${LOGGING_LEVEL:-INFO}
+  PROXY_SERVER: ${PROXY_SERVER}
+  PROXY_USERNAME: ${PROXY_USERNAME}
+  PROXY_PASSWORD: ${PROXY_PASSWORD}
+  SEARXNG_ENDPOINT: ${SEARXNG_ENDPOINT}
+  SEARXNG_ENGINES: ${SEARXNG_ENGINES}
+  SEARXNG_CATEGORIES: ${SEARXNG_CATEGORIES}
 
 services:
   playwright-service:
+    build: apps/playwright-service-ts
+    environment:
+      PORT: 3000
+      PROXY_SERVER: ${PROXY_SERVER}
+      PROXY_USERNAME: ${PROXY_USERNAME}
+      PROXY_PASSWORD: ${PROXY_PASSWORD}
+      BLOCK_MEDIA: ${BLOCK_MEDIA}
+      MAX_CONCURRENT_PAGES: ${MAX_CONCURRENT_PAGES:-15}
+    networks:
+      - backend
     deploy:
       replicas: 1
       resources:
         limits:
-          cpus: "1.0"
+          cpus: "0.6"
           memory: 2G
     shm_size: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
     tmpfs:
       - /tmp/.cache:noexec,nosuid,size=1g
+    restart: unless-stopped
 
   playwright-lb:
-    cpus: 0.2
+    image: nginx:alpine
+    networks:
+      - backend
+    volumes:
+      - ./nginx-playwright.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - playwright-service
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    cpus: 0.1
     mem_limit: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+    restart: unless-stopped
 
   api:
-    cpus: 1.5
-    mem_limit: 4G
-    memswap_limit: 4G
+    <<: *common-service
+    environment:
+      <<: *common-env
+      HOST: "0.0.0.0"
+      PORT: ${INTERNAL_PORT:-3300}
+      EXTRACT_WORKER_PORT: ${EXTRACT_WORKER_PORT:-3004}
+      WORKER_PORT: ${WORKER_PORT:-3005}
+      NUQ_RABBITMQ_URL: amqp://rabbitmq:5672
+      NUQ_WORKER_COUNT: ${NUQ_WORKER_COUNT:-2}
+      ENV: local
+    depends_on:
+      redis:
+        condition: service_started
+      playwright-lb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      nuq-postgres:
+        condition: service_healthy
+    ports:
+      - "${PORT:-3300}:${INTERNAL_PORT:-3300}"
+    command: node dist/src/harness.js --start-docker
+    cpus: 0.8
+    mem_limit: 3G
+    memswap_limit: 3G
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3300/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - backend
 
   redis:
-    cpus: 0.5
+    image: redis:alpine
+    networks:
+      - backend
+    command: redis-server --bind 0.0.0.0 --maxmemory 768mb --maxmemory-policy allkeys-lru
+    cpus: 0.2
     mem_limit: 1G
     memswap_limit: 1G
-    command: redis-server --bind 0.0.0.0 --maxmemory 768mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - redis-data:/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+        compress: "true"
+    restart: unless-stopped
 
   rabbitmq:
-    cpus: 0.5
+    image: rabbitmq:3-management
+    networks:
+      - backend
+    command: rabbitmq-server
+    cpus: 0.2
     mem_limit: 1G
     memswap_limit: 1G
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+        compress: "true"
+    restart: unless-stopped
 
   nuq-postgres:
-    cpus: 0.3
-    mem_limit: 1G
-    memswap_limit: 1G
+    build: apps/nuq-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+    networks:
+      - backend
+    cpus: 0.1
+    mem_limit: 768M
+    memswap_limit: 768M
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres} && psql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres} -c 'SELECT 1 FROM nuq.queue_scrape LIMIT 1'"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  rabbitmq-data:
+  postgres-data:
+
+networks:
+  backend:
+    driver: bridge
