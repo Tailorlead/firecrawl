@@ -244,9 +244,12 @@ services:
 
   camoufox:
     build: apps/camoufox
-    # NOTE: profile gate removed for staging — Camoufox always builds here so
-    # we can A/B test per-domain stealth. On prod (docker-compose.yaml) it
-    # stays opt-in via profiles: ["camoufox"].
+    # Opt-in via Dokploy COMPOSE_PROFILES=camoufox.
+    # Camoufox 0.4 + Playwright Python ont une combo de version délicate
+    # (le `python -m camoufox server` natif ne marche pas en standalone) —
+    # à reprendre dans une PR dédiée. Pour l'instant on reste sur
+    # Patchright + stealth=medium côté playwright-service, qui est éprouvé.
+    profiles: ["camoufox"]
     networks:
       - backend
     environment:
