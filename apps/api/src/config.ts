@@ -126,6 +126,14 @@ const configSchema = z.object({
   SEARCH_DDG_ACCEPT_LANGUAGE: z
     .string()
     .default("fr-FR,fr;q=0.9,en-US;q=0.7,en;q=0.6"),
+  SEARCH_HTTP_STEALTH_ENABLED: z.stringbool().default(true),
+  SEARCH_BROWSER_FALLBACK_ENABLED: z.stringbool().default(true),
+  SEARCH_BROWSER_FALLBACK_URL: z.string().optional(), // defaults to PLAYWRIGHT_MICROSERVICE_URL host
+  SCRAPE_STEALTH_LEVEL: z.enum(["off", "medium", "high"]).default("high"),
+  SCRAPE_BLOCK_WEBRTC: z.stringbool().default(true),
+  SCRAPE_HIDE_CANVAS: z.stringbool().default(true),
+  CAMOUFOX_CDP_URL: z.string().optional(),
+  CAMOUFOX_DOMAINS: z.string().optional(),
 
   // Worker Configuration
   WORKER_PORT: z.coerce.number().default(3005),

@@ -1,9 +1,8 @@
-import * as undici from "undici";
 import { config } from "../../config";
 import { JSDOM } from "jsdom";
 import { SearchV2Response, WebSearchResult } from "../../lib/entities";
 import { logger } from "../../lib/logger";
-import { getSecureDispatcher } from "../../scraper/scrapeURL/engines/utils/safeFetch";
+import { stealthFetch, type StealthResponse } from "./stealthFetch";
 
 class DDGAntiBotError extends Error {
   constructor() {
@@ -154,11 +153,14 @@ function buildHeaders(
   return headers;
 }
 
-function parseSetCookies(response: undici.Response): string {
+function parseSetCookies(response: StealthResponse): string {
   // Reduce Set-Cookie headers to a single Cookie line for reuse on next hit.
+  // impit/Headers both expose getSetCookie() per WHATWG; fall back to manual split.
+  const headers: any = response.headers;
   const setCookieHeaders =
-    (response.headers as any).getSetCookie?.() ??
-    (response.headers.get("set-cookie")?.split(/,(?=[^;]+?=)/) ?? []);
+    headers.getSetCookie?.() ??
+    headers.get?.("set-cookie")?.split(/,(?=[^;]+?=)/) ??
+    [];
   return (setCookieHeaders as string[])
     .map(c => c.split(";")[0].trim())
     .filter(Boolean)
@@ -178,8 +180,7 @@ async function prewarmSession(
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), Math.min(timeoutMs, 4000));
   try {
-    const resp = await undici.fetch("https://duckduckgo.com/", {
-      dispatcher: getSecureDispatcher(false),
+    const resp = await stealthFetch("https://duckduckgo.com/", {
       redirect: "follow",
       headers: buildHeaders(userAgent, config.SEARCH_DDG_REFERER),
       signal: controller.signal,
@@ -246,13 +247,12 @@ export async function ddgSearch(
       }, timeout);
 
       try {
-        let response: undici.Response;
+        let response: StealthResponse;
 
         if (isFirstPage) {
-          response = await undici.fetch(
+          response = await stealthFetch(
             `https://html.duckduckgo.com/html?${params.toString()}`,
             {
-              dispatcher: getSecureDispatcher(false),
               redirect: "follow",
               headers: buildHeaders(
                 userAgent,
@@ -263,10 +263,9 @@ export async function ddgSearch(
             },
           );
         } else {
-          response = await undici.fetch(`https://html.duckduckgo.com/html`, {
+          response = await stealthFetch(`https://html.duckduckgo.com/html`, {
             method: "POST",
             body: nextPageData.toString(),
-            dispatcher: getSecureDispatcher(false),
             redirect: "follow",
             headers: {
               ...buildHeaders(
