@@ -1,0 +1,96 @@
+# SearXNG settings for TailorLead self-hosted fallback search.
+# This instance is private (network "backend" only), accessed by the
+# firecrawl-api container as a fallback when DDG is rate-limited.
+#
+# Docs: https://docs.searxng.org/admin/settings/
+
+use_default_settings: true
+
+general:
+  debug: false
+  instance_name: "tailorlead-internal"
+  privacypolicy_url: false
+  donation_url: false
+  contact_url: false
+  enable_metrics: false
+
+search:
+  safe_search: 0
+  autocomplete: ""
+  default_lang: "auto"
+  ban_time_on_fail: 5
+  max_ban_time_on_fail: 120
+  formats:
+    - html
+    - json
+
+server:
+  port: 8080
+  bind_address: "0.0.0.0"
+  # SECRET_KEY is read from $SEARXNG_SECRET via image entrypoint; do not hardcode.
+  secret_key: "ENV_SEARXNG_SECRET_REPLACED_BY_IMAGE"
+  base_url: false
+  image_proxy: false
+  http_protocol_version: "1.0"
+  method: "POST"
+  default_http_headers:
+    X-Content-Type-Options: nosniff
+    X-Frame-Options: DENY
+    Referrer-Policy: no-referrer
+
+ui:
+  static_use_hash: true
+  default_locale: "en"
+  query_in_title: false
+  infinite_scroll: false
+  center_alignment: false
+  results_on_new_tab: false
+
+outgoing:
+  request_timeout: 8.0
+  max_request_timeout: 15.0
+  pool_connections: 100
+  pool_maxsize: 20
+  enable_http2: true
+  retries: 1
+  using_tor_proxy: false
+
+# Only enable engines that work well from a single egress IP without
+# captchas. We deliberately exclude Google (CAPTCHA), Yahoo (slow), Yandex.
+engines:
+  - name: brave
+    disabled: false
+    timeout: 5.0
+  - name: qwant
+    disabled: false
+    timeout: 5.0
+  - name: mojeek
+    disabled: false
+    timeout: 6.0
+  - name: duckduckgo
+    disabled: false
+    timeout: 5.0
+  - name: bing
+    disabled: false
+    timeout: 5.0
+  - name: startpage
+    disabled: true
+  - name: google
+    disabled: true
+  - name: yandex
+    disabled: true
+
+# No Redis/Valkey by default — keeps the sidecar stateless and trivial to
+# deploy on Dokploy. Enable later if we need rate-limit memory.
+redis:
+  url: false
+
+# Limiter disabled because this instance is only reachable on the internal
+# Docker network; no need to throttle our own backend.
+enabled_plugins:
+  - "Hash plugin"
+  - "Self Information"
+  - "Tracker URL remover"
+
+disabled_plugins:
+  - "Hostnames plugin"

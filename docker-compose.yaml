@@ -48,9 +48,25 @@ x-common-env: &common-env
   PROXY_SERVER: ${PROXY_SERVER}
   PROXY_USERNAME: ${PROXY_USERNAME}
   PROXY_PASSWORD: ${PROXY_PASSWORD}
-  SEARXNG_ENDPOINT: ${SEARXNG_ENDPOINT}
-  SEARXNG_ENGINES: ${SEARXNG_ENGINES}
-  SEARXNG_CATEGORIES: ${SEARXNG_CATEGORIES}
+  SEARXNG_ENDPOINT: ${SEARXNG_ENDPOINT:-http://searxng:8080}
+  SEARXNG_ENGINES: ${SEARXNG_ENGINES:-brave,qwant,mojeek,duckduckgo,bing}
+  SEARXNG_CATEGORIES: ${SEARXNG_CATEGORIES:-general}
+  SEARCH_CACHE_ENABLED: ${SEARCH_CACHE_ENABLED:-true}
+  SEARCH_CACHE_TTL_SEC: ${SEARCH_CACHE_TTL_SEC:-604800}
+  SEARCH_DDG_COLD_TTL_SEC: ${SEARCH_DDG_COLD_TTL_SEC:-600}
+  SEARCH_SEARXNG_COLD_TTL_SEC: ${SEARCH_SEARXNG_COLD_TTL_SEC:-300}
+  SEARCH_DDG_MAX_RETRIES: ${SEARCH_DDG_MAX_RETRIES:-1}
+  SEARCH_DDG_PREWARM_ENABLED: ${SEARCH_DDG_PREWARM_ENABLED:-true}
+  SEARCH_DDG_REFERER: ${SEARCH_DDG_REFERER:-https://www.google.com/}
+  SEARCH_DDG_ACCEPT_LANGUAGE: ${SEARCH_DDG_ACCEPT_LANGUAGE:-fr-FR,fr;q=0.9,en-US;q=0.7,en;q=0.6}
+  SEARCH_HTTP_STEALTH_ENABLED: ${SEARCH_HTTP_STEALTH_ENABLED:-true}
+  SEARCH_BROWSER_FALLBACK_ENABLED: ${SEARCH_BROWSER_FALLBACK_ENABLED:-true}
+  SEARCH_BROWSER_FALLBACK_URL: ${SEARCH_BROWSER_FALLBACK_URL:-}
+  SCRAPE_STEALTH_LEVEL: ${SCRAPE_STEALTH_LEVEL:-high}
+  SCRAPE_BLOCK_WEBRTC: ${SCRAPE_BLOCK_WEBRTC:-true}
+  SCRAPE_HIDE_CANVAS: ${SCRAPE_HIDE_CANVAS:-true}
+  CAMOUFOX_CDP_URL: ${CAMOUFOX_CDP_URL:-}
+  CAMOUFOX_DOMAINS: ${CAMOUFOX_DOMAINS:-}
 
 services:
   playwright-service:
@@ -62,6 +78,11 @@ services:
       PROXY_PASSWORD: ${PROXY_PASSWORD}
       BLOCK_MEDIA: ${BLOCK_MEDIA}
       MAX_CONCURRENT_PAGES: ${MAX_CONCURRENT_PAGES:-60}
+      SCRAPE_STEALTH_LEVEL: ${SCRAPE_STEALTH_LEVEL:-high}
+      SCRAPE_BLOCK_WEBRTC: ${SCRAPE_BLOCK_WEBRTC:-true}
+      SCRAPE_HIDE_CANVAS: ${SCRAPE_HIDE_CANVAS:-true}
+      CAMOUFOX_CDP_URL: ${CAMOUFOX_CDP_URL:-}
+      CAMOUFOX_DOMAINS: ${CAMOUFOX_DOMAINS:-}
     networks:
       - backend
     deploy:
@@ -149,7 +170,7 @@ services:
     image: redis:alpine
     networks:
       - backend
-    command: redis-server --bind 0.0.0.0 --maxmemory 4096mb --maxmemory-policy allkeys-lru
+    command: redis-server --bind 0.0.0.0 --maxmemory 4096mb --maxmemory-policy noeviction
     cpus: 2.0
     mem_limit: 5G
     memswap_limit: 5G
@@ -184,6 +205,58 @@ services:
       timeout: 5s
       retries: 3
       start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+        compress: "true"
+    restart: unless-stopped
+
+  camoufox:
+    build: apps/camoufox
+    profiles: ["camoufox"]
+    networks:
+      - backend
+    environment:
+      CAMOUFOX_SERVER_PORT: 1337
+    cpus: 2.0
+    mem_limit: 2G
+    memswap_limit: 2G
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:1337/ 2>/dev/null || curl -fsS http://127.0.0.1:1337/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+    restart: unless-stopped
+
+  searxng:
+    image: searxng/searxng:latest
+    networks:
+      - backend
+    environment:
+      SEARXNG_BASE_URL: http://searxng:8080/
+      SEARXNG_SECRET: ${SEARXNG_SECRET:-change_me_in_dokploy_at_least_32_chars}
+      INSTANCE_NAME: tailorlead-internal
+      UWSGI_WORKERS: ${SEARXNG_UWSGI_WORKERS:-4}
+      UWSGI_THREADS: ${SEARXNG_UWSGI_THREADS:-4}
+    volumes:
+      - ./apps/searxng/settings.yml:/etc/searxng/settings.yml:ro
+    cpus: 1.0
+    mem_limit: 1G
+    memswap_limit: 1G
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     logging:
       driver: "json-file"
       options:
