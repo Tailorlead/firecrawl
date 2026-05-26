@@ -18,15 +18,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-liberation fonts-noto-color-emoji ca-certificates wget \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir "camoufox[geoip]==0.4.*" "playwright>=1.40,<2"
+# IMPORTANT: pin playwright==1.49.1 because camoufox 0.4's launchServer
+# Node wrapper requires `browserServerImpl.js` which was removed from the
+# Playwright driver bundle in 1.50+. 1.49.1 is the last version that ships
+# it and is still compatible with camoufox.
+RUN pip install --no-cache-dir "camoufox[geoip]==0.4.*" "playwright==1.49.1"
 
-# Download Camoufox browser binary once at build time.
-RUN python -m camoufox fetch || true
+# Download Camoufox browser binary + GeoIP DB once at build time.
+RUN python -m camoufox fetch
+RUN python -m camoufox geoip download || true
 
 ENV CAMOUFOX_SERVER_PORT=1337
+ENV CAMOUFOX_SERVER_HOST=0.0.0.0
 EXPOSE 1337
 
-# `--server` runs a Playwright WebSocket server bound to all interfaces
-# inside the container (network "backend"-scoped, not exposed publicly).
-# Workers connect via chromium.connect("ws://camoufox:1337").
-CMD ["python", "-m", "camoufox", "server", "--port", "1337", "--host", "0.0.0.0"]
+# `python -m camoufox server` has no host/port flags in 0.4, so we call
+# the launch_server() Python API ourselves and pass host/port via env.
+COPY launch_server.py /opt/launch_server.py
+CMD ["python", "/opt/launch_server.py"]
