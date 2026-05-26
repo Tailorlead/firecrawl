@@ -3,6 +3,7 @@ import { config } from "../../config";
 import { fire_engine_search_v2 } from "./fireEngine-v2";
 import { searxng_search } from "./searxng";
 import { ddgSearch } from "./ddgsearch";
+import { ddgSearchBrowser } from "./ddgsearchBrowser";
 import { Logger } from "winston";
 import { buildCacheKey, getCachedSearch, setCachedSearch } from "./cache";
 import { isCold, markCold } from "./coldList";
@@ -216,23 +217,37 @@ export async function search({
     await recordEngine("searxng", "cold_skipped");
   }
 
-  // 3) Last-resort retry on DDG if everything else is cold (and DDG was cold).
-  // This handles the pathological case where the cold lists drift; we'd rather
-  // return something than empty.
-  if (ddgCold) {
+  // 3) Browser fallback — runs DDG inside Patchright on the existing
+  // playwright-service workers. Much slower (~5s) but indistinguishable
+  // from a real user. Only attempted when both HTTP DDG and SearXNG are
+  // cold or empty, and the feature flag is on.
+  if (config.SEARCH_BROWSER_FALLBACK_ENABLED !== false) {
     try {
-      const ddgRetry = await runWithMetrics("ddg", logger, () =>
-        ddgSearch(query, num_results, { tbs, lang, country, proxy, timeout }),
+      const browserResults = await runWithMetrics("browser", logger, () =>
+        ddgSearchBrowser(query, {
+          num_results,
+          lang,
+          country,
+          timeout: Math.max(timeout, 20000),
+        }),
       );
-      if (hasResults(ddgRetry)) {
+      if (hasResults(browserResults)) {
         if (cacheEnabled) {
-          await setCachedSearch(cacheKey, ddgRetry, config.SEARCH_CACHE_TTL_SEC);
+          await setCachedSearch(
+            cacheKey,
+            browserResults,
+            config.SEARCH_CACHE_TTL_SEC,
+          );
           await recordCache("set");
         }
-        return ddgRetry;
+        return browserResults;
       }
-    } catch {
-      /* fall through */
+    } catch (err) {
+      if (err instanceof EngineBlockedError) {
+        // Both layers (HTTP + browser) blocked → cold the browser engine
+        // for a shorter window since rebooting it is cheap.
+        await markCold("browser", 120);
+      }
     }
   }
 
