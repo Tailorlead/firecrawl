@@ -21,10 +21,14 @@ def main() -> None:
     sys.stdout.write(f"[camoufox] launching Playwright server on ws://{host}:{port}\n")
     sys.stdout.flush()
     # launch_server() forwards **kwargs to Playwright BrowserType.launchServer.
+    # `ws_path` (custom WS path) replaces Playwright's default random UUID token,
+    # so callers can connect via a predictable URL (ws://camoufox:1337/ws).
+    # Without it, Playwright generates a fresh UUID at every start that nobody
+    # can know upfront → 400 Bad Request from chromium.connect("ws://camoufox:1337").
     # `headless=True` is required for a containerized server (no display).
     # `geoip=True` enables geo-coherent fingerprint (locale/timezone matched
     # to the egress IP); harmless if geoip data isn't cached yet.
-    launch_server(host=host, port=port, headless=True, geoip=True)
+    launch_server(host=host, port=port, ws_path="ws", headless=True, geoip=True)
 
 
 if __name__ == "__main__":
