@@ -115,6 +115,18 @@ const configSchema = z.object({
   SEARCH_INDEX_SAMPLE_RATE: z.coerce.number().default(0.1),
   ENABLE_SEARCH_INDEX: z.stringbool().optional(),
 
+  // Search stealth & cache (TailorLead additions)
+  SEARCH_CACHE_ENABLED: z.stringbool().default(true),
+  SEARCH_CACHE_TTL_SEC: z.coerce.number().default(604800), // 7 days
+  SEARCH_DDG_COLD_TTL_SEC: z.coerce.number().default(600), // 10 min
+  SEARCH_SEARXNG_COLD_TTL_SEC: z.coerce.number().default(300), // 5 min
+  SEARCH_DDG_MAX_RETRIES: z.coerce.number().default(1),
+  SEARCH_DDG_PREWARM_ENABLED: z.stringbool().default(true),
+  SEARCH_DDG_REFERER: z.string().default("https://www.google.com/"),
+  SEARCH_DDG_ACCEPT_LANGUAGE: z
+    .string()
+    .default("fr-FR,fr;q=0.9,en-US;q=0.7,en;q=0.6"),
+
   // Worker Configuration
   WORKER_PORT: z.coerce.number().default(3005),
   NUQ_WORKER_PORT: z.coerce.number().default(3000).catch(3000), // todo: investigate why .catch is needed
