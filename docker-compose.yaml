@@ -149,7 +149,7 @@ services:
     image: redis:alpine
     networks:
       - backend
-    command: redis-server --bind 0.0.0.0 --maxmemory 4096mb --maxmemory-policy allkeys-lru
+    command: redis-server --bind 0.0.0.0 --maxmemory 4096mb --maxmemory-policy noeviction
     cpus: 2.0
     mem_limit: 5G
     memswap_limit: 5G

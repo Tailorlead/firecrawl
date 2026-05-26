@@ -12,6 +12,7 @@ import {
   metricsController,
   nuqMetricsController,
 } from "../controllers/v0/admin/metrics";
+import { searchMetricsController } from "../controllers/v0/admin/search-metrics";
 import { realtimeSearchController } from "../controllers/v2/f-search";
 import { concurrencyQueueBackfillController } from "../controllers/v0/admin/concurrency-queue-backfill";
 import { integCreateUserController } from "../controllers/v0/admin/create-user";
@@ -62,6 +63,11 @@ adminRouter.get(
 adminRouter.get(
   `/admin/${config.BULL_AUTH_KEY}/nuq-metrics`,
   wrap(nuqMetricsController),
+);
+
+adminRouter.get(
+  `/admin/${config.BULL_AUTH_KEY}/search-metrics`,
+  wrap(searchMetricsController),
 );
 
 adminRouter.post(
