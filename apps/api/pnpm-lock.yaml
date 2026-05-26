@@ -143,6 +143,9 @@ importers:
       http-cookie-agent:
         specifier: ^7.0.1
         version: 7.0.1(tough-cookie@4.1.4)(undici@7.18.2)
+      impit:
+        specifier: ^0.14.0
+        version: 0.14.0
       ioredis:
         specifier: ^5.6.1
         version: 5.6.1
@@ -2730,6 +2733,7 @@ packages:
 
   '@ungap/structured-clone@1.3.0':
     resolution: {integrity: sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g==}
+    deprecated: Potential CWE-502 - Update to 1.3.1 or higher
 
   '@unrs/resolver-binding-android-arm-eabi@1.11.1':
     resolution: {integrity: sha512-ppLRUgHVaGRWUx0R0Ut06Mjo9gBaBkg3v/8AxusGLhsIotbBLuRk51rAzqLC8gq6NyyAojEXglNjzf6R948DNw==}
@@ -3950,6 +3954,62 @@ packages:
 
   ieee754@1.2.1:
     resolution: {integrity: sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==}
+
+  impit-darwin-arm64@0.14.0:
+    resolution: {integrity: sha512-I/v/raC+kx0dhiTZ7MTNtqDvYz9cuBZYrKR2g1YWsDSF16msTvjYc/4vEII5o7fBeUWyxzt9lC8Ef4HD3Lvi1Q==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [darwin]
+
+  impit-darwin-x64@0.14.0:
+    resolution: {integrity: sha512-R4rxz8ub/L8B5rTdYa6uanzB5SotvbOYmSUbWM4lDcYCr/UWIkybTi9+MvIRMIoX3UI3KPvvrtDD11v+VO03Kw==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [darwin]
+
+  impit-linux-arm64-gnu@0.14.0:
+    resolution: {integrity: sha512-JBjmjH8hGe+UJIDPKoS40GvRRfJrtFkGiUxupksTVdbAAI3+SVyhwBo1I6ave9Ig5QrMVpj6XWPUDbDepPdaCw==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  impit-linux-arm64-musl@0.14.0:
+    resolution: {integrity: sha512-TPMa02wppWdlAqacrLT8qxM+EGoKi7b1mTUZLhWsjaSfweIsJmCCQygN/+eMZFT070pTcUNSTQBxzb3zBQKRQg==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  impit-linux-x64-gnu@0.14.0:
+    resolution: {integrity: sha512-VfaWq+YI5muQsM6cBoG4d+ltb0hzbJU4mj8PcG7M+Xe9Srq2jOIwoSQmgU9hhgnP9HKhiPTY/05Z8jvmllmZQw==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  impit-linux-x64-musl@0.14.0:
+    resolution: {integrity: sha512-oGCJu11f0R5wSfB6HSCIUIZ8Fic/2JmBDioxifgxDtFJ9EEl2e4WinTD8woKNaS6LqwrIgUE9NJ4CXrwxCbrog==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  impit-win32-arm64-msvc@0.14.0:
+    resolution: {integrity: sha512-V/GJP5l4y3MGjMVJJXiZ09guQBvIDaDKdvONe+i8zpDbRopZLSRdWrsaTaiG/Nes2Iy7kS7q3eFgsV5ID45sPw==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [win32]
+
+  impit-win32-x64-msvc@0.14.0:
+    resolution: {integrity: sha512-lgVnvVxUlNtyctPFjWUrWtTitK+aahwgn3YzeakODN2dVY5x7XOP1wg7XQjOg/AD6ydc40yBwWXyOf1hknGsHA==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [win32]
+
+  impit@0.14.0:
+    resolution: {integrity: sha512-kxd8IUkzwajLIZiNIbRVcsry/mY7yQNhQ8XIcpKCZ3Sv9KirRMt7hbAwy3D5GBJNHvgHIplivHgnegQ7P87F6g==}
+    engines: {node: '>= 20'}
 
   import-in-the-middle@2.0.0:
     resolution: {integrity: sha512-yNZhyQYqXpkT0AKq3F3KLasUSK4fHvebNH5hOsKQw2dhGSALvQ4U0BqUc5suziKvydO5u5hgN2hy1RJaho8U5A==}
@@ -5507,10 +5567,12 @@ packages:
 
   uuid@8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   uuid@9.0.1:
     resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   v8-compile-cache-lib@3.0.1:
@@ -9621,6 +9683,41 @@ snapshots:
       safer-buffer: 2.1.2
 
   ieee754@1.2.1: {}
+
+  impit-darwin-arm64@0.14.0:
+    optional: true
+
+  impit-darwin-x64@0.14.0:
+    optional: true
+
+  impit-linux-arm64-gnu@0.14.0:
+    optional: true
+
+  impit-linux-arm64-musl@0.14.0:
+    optional: true
+
+  impit-linux-x64-gnu@0.14.0:
+    optional: true
+
+  impit-linux-x64-musl@0.14.0:
+    optional: true
+
+  impit-win32-arm64-msvc@0.14.0:
+    optional: true
+
+  impit-win32-x64-msvc@0.14.0:
+    optional: true
+
+  impit@0.14.0:
+    optionalDependencies:
+      impit-darwin-arm64: 0.14.0
+      impit-darwin-x64: 0.14.0
+      impit-linux-arm64-gnu: 0.14.0
+      impit-linux-arm64-musl: 0.14.0
+      impit-linux-x64-gnu: 0.14.0
+      impit-linux-x64-musl: 0.14.0
+      impit-win32-arm64-msvc: 0.14.0
+      impit-win32-x64-msvc: 0.14.0
 
   import-in-the-middle@2.0.0:
     dependencies:
